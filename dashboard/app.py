@@ -34,6 +34,9 @@ def detect_project_root() -> Path:
         Path.cwd().resolve(),
     ])
 
+    if hasattr(sys, '_MEIPASS'):
+        return Path(sys._MEIPASS)
+
     for candidate in candidates:
         if (candidate / "audit.py").exists() and (candidate / "realtime_threat_engine.py").exists():
             return candidate
@@ -55,7 +58,14 @@ from flask import Flask, jsonify, render_template, request, send_file, session, 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 
-app = Flask(__name__, template_folder=str(DASHBOARD_DIR / "templates"))
+if hasattr(sys, '_MEIPASS'):
+    template_folder = os.path.join(sys._MEIPASS, 'dashboard', 'templates')
+    static_folder = os.path.join(sys._MEIPASS, 'dashboard', 'static')
+else:
+    template_folder = str(DASHBOARD_DIR / "templates")
+    static_folder = str(DASHBOARD_DIR / "static")
+
+app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
 app.secret_key = os.getenv("SECRET_KEY", "cybersec-dev-secret-key-change-me")
 
 limiter = Limiter(

@@ -126,6 +126,43 @@
 - How it works: `build.sh` invokes `pyinstaller` with `--onefile`, bundling templates, config, and explicitly identifying hidden sklearn/flask dependencies. Documented known limitations in the README.
 - How to verify: Run `./build.sh` and execute the generated binary `./dist/cybersec-dashboard`.
 
+### PyInstaller Executable Verification (Issue 16)
+```text
+=== GET /login ===
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.8 Python/3.14.6
+Date: Tue, 30 Jun 2026 09:43:28 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 3968
+Connection: close
+
+=== POST /login ===
+HTTP/1.1 302 FOUND
+Server: Werkzeug/3.1.8 Python/3.14.6
+Date: Tue, 30 Jun 2026 09:43:28 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 189
+Location: /
+Vary: Cookie
+Set-Cookie: session=eyJhdXRoZW50aWNhdGVkIjp0cnVlfQ.akOPwA.WPOi1rp_CknbrFuTzwXiCB5mX18; HttpOnly; Path=/
+Connection: close
+
+<!doctype html>
+<html lang=en>
+<title>Redirecting...</title>
+<h1>Redirecting...</h1>
+<p>You should be redirected automatically to the target URL: <a href="/">/</a>. If not, click the link.
+
+=== GET / ===
+HTTP/1.1 200 OK
+Server: Werkzeug/3.1.8 Python/3.14.6
+Date: Tue, 30 Jun 2026 09:43:28 GMT
+Content-Type: text/html; charset=utf-8
+Content-Length: 13291
+Vary: Cookie
+Connection: close
+```
+
 ---
 
 ## Test Suite Verification
