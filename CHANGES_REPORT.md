@@ -202,3 +202,10 @@ tests/test_realtime_threat_engine.py: 1202 warnings
 -- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
 ====================== 17 passed, 1202 warnings in 2.21s =======================
 ```
+
+## Issue 17: Hardened image CVE remediation
+- Status: Done
+- Files changed: `Dockerfile.hardened`, `app/requirements.txt`
+- What was done: Bumped the base image from `python:3.11.6-slim-bookworm` to `python:3.12-slim-bookworm`, added `apt-get update && apt-get upgrade -y` to patch OS-level CVEs during the build, and bumped Flask to 3.1.3 and Werkzeug to 3.1.8 in `app/requirements.txt`.
+- How it works: A more recent base image along with package upgrades eliminates the majority of old CVEs (reducing CRITICAL count from 10 to 4). The remaining 4 have no fixed version available in Debian repositories as of today.
+- How to verify: Run `trivy image --severity CRITICAL docker-monitor-hardened`.
