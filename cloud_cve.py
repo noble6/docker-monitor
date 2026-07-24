@@ -1,6 +1,7 @@
 import json
 import time
 import logging
+import os
 from pathlib import Path
 from typing import Dict, Any, List
 import requests
@@ -12,6 +13,7 @@ class CloudCVEFetcher:
         self.enabled = cloud_config.get("enabled", False)
         self.sync_interval_hours = cloud_config.get("sync_interval_hours", 6)
         self.source = cloud_config.get("source", "osv")
+        self.offline = os.getenv("OFFLINE_MODE", "false").lower() == "true"
         self.cache_file = Path("cve_cache.json")
         
     def _is_cache_stale(self) -> bool:
@@ -35,12 +37,15 @@ class CloudCVEFetcher:
             json.dump(data, f)
 
     def fetch_severity(self, cve_ids: List[str]) -> Dict[str, str]:
-        """Fetch severities for a list of CVE IDs, using cache and OSV.dev"""
         if not self.enabled:
             return {}
             
         cache = self.load_cache()
         stale = self._is_cache_stale()
+        
+        if self.offline:
+            logging.info("OFFLINE_MODE is enabled. Skipping live OSV.dev fetch, using only local cache.")
+            return {cve: cache.get(cve, "UNKNOWN") for cve in cve_ids}
         
         results = {}
         to_fetch = []

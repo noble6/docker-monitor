@@ -57,6 +57,13 @@ from realtime_threat_engine import RuntimeThreatEngine
 from flask import Flask, jsonify, render_template, request, send_file, session, redirect, url_for
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
+from prometheus_client import generate_latest, Gauge, Counter, CONTENT_TYPE_LATEST
+
+RISK_SCORE_GAUGE = Gauge("container_risk_score", "Container risk score", ["container_name"])
+ANOMALY_SCORE_GAUGE = Gauge("container_anomaly_score", "Container AI anomaly score", ["container_name"])
+CVE_GAUGE = Gauge("cve_count", "Count of CVEs per scan", ["severity"])
+AUDIT_RUNS = Counter("audit_runs_total", "Total number of audit runs triggered")
+AUTH_FAILURES = Counter("dashboard_auth_failures_total", "Total dashboard auth failures")
 
 if hasattr(sys, '_MEIPASS'):
     template_folder = os.path.join(sys._MEIPASS, 'dashboard', 'templates')
@@ -116,6 +123,7 @@ def run_command(
 
 
 def _unauthorized_response():
+    AUTH_FAILURES.inc()
     if request.path == "/" or request.path.startswith("/reports/"):
         return redirect(url_for("login"))
     return (
@@ -157,6 +165,7 @@ def login():
         if compare_digest(username, CONTROL_USER) and compare_digest(password, CONTROL_PASSWORD):
             session["authenticated"] = True
             return redirect(url_for("index"))
+        AUTH_FAILURES.inc()
         return render_template("login.html", error="Invalid credentials")
     return render_template("login.html")
 
@@ -297,6 +306,7 @@ def index():
 
 
 @app.route("/api/latest")
+@require_dashboard_auth
 def api_latest():
     """API endpoint for latest report."""
     report = load_latest_report()
@@ -306,11 +316,13 @@ def api_latest():
 
 
 @app.route("/api/history")
+@require_dashboard_auth
 def api_history():
     """API endpoint for historical data."""
     return jsonify(load_history())
 
 @app.route("/api/runtime-history")
+@require_dashboard_auth
 def api_runtime_history():
     """API endpoint for runtime threat history from DB."""
     try:
@@ -321,6 +333,7 @@ def api_runtime_history():
 
 
 @app.route("/api/trends")
+@require_dashboard_auth
 def api_trends():
     """API endpoint for trend analysis."""
     history = load_history()
@@ -351,6 +364,7 @@ def api_trends():
 
 
 @app.route("/api/runtime-threats")
+@require_dashboard_auth
 def api_runtime_threats():
     """API endpoint for latest runtime threat findings."""
     return jsonify(load_runtime_findings())
@@ -423,6 +437,8 @@ def api_control_panel_run_audit():
     """Trigger a security audit run from the control panel."""
     command = [sys.executable, "audit.py"]
     result = run_command(command)
+    if result.returncode == 0:
+        AUDIT_RUNS.inc()
     return (
         jsonify(
             {
@@ -492,6 +508,7 @@ def api_control_panel_unprotect(container_id):
 
 
 @app.route("/api/runtime-threats/alerts")
+@require_dashboard_auth
 def api_runtime_alerts():
     """Only high-priority runtime alerts with CVE+fix context."""
     runtime = load_runtime_findings()
@@ -499,6 +516,7 @@ def api_runtime_alerts():
 
 
 @app.route("/api/runtime-threats/container/<name>")
+@require_dashboard_auth
 def api_runtime_container_detail(name):
     """Container-level runtime detail including CVEs and suggested fixes."""
     item = runtime_summary_by_container(name)
@@ -541,6 +559,22 @@ def download_report(filename):
         return jsonify({"error": "File not found"}), 404
 
     return send_file(requested, as_attachment=True)
+
+
+@app.route("/metrics")
+def metrics():
+    """Prometheus metrics endpoint."""
+    runtime = load_runtime_findings()
+    for finding in runtime.get("findings", []):
+        cname = finding.get("name", "unknown")
+        RISK_SCORE_GAUGE.labels(container_name=cname).set(finding.get("score", 0))
+        ANOMALY_SCORE_GAUGE.labels(container_name=cname).set(finding.get("ai_anomaly_score", 0.0))
+        
+    summary = runtime.get("summary", {})
+    CVE_GAUGE.labels(severity="critical").set(summary.get("total_cve_critical", 0))
+    CVE_GAUGE.labels(severity="high").set(summary.get("total_cve_high", 0))
+    
+    return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 
 @app.route("/health")

@@ -7,6 +7,7 @@ Weights are empirically tuned heuristics.
 from __future__ import annotations
 
 import math
+import logging
 from typing import Dict
 
 
@@ -87,8 +88,11 @@ class MLAnomalyDetector:
         if joblib and os.path.exists(self.MODEL_PATH):
             try:
                 self.model = joblib.load(self.MODEL_PATH)
-            except Exception:
-                pass
+                logging.info(f"ML model successfully loaded from {self.MODEL_PATH}")
+            except Exception as e:
+                logging.warning(f"Failed to load ML model from {self.MODEL_PATH}: {e}")
+        else:
+            logging.warning(f"ML model not loaded. joblib present: {bool(joblib)}, file exists: {os.path.exists(self.MODEL_PATH)}")
 
     @classmethod
     def train_and_save(cls):

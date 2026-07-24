@@ -4,7 +4,7 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
 
-DB_PATH = Path("docker_monitor.db")
+DB_PATH = Path("runtime/docker_monitor.db")
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)

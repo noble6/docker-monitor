@@ -1,0 +1,130 @@
+{
+  "generated_at": "2026-07-24T10:10:54.818077+00:00",
+  "summary": {
+    "containers_monitored": 1,
+    "critical_alerts": 0,
+    "high_alerts": 0,
+    "medium_alerts": 1,
+    "low_alerts": 0,
+    "mean_ai_anomaly_score": 28.51,
+    "total_cve_critical": 5,
+    "total_cve_high": 60,
+    "containers_with_vulns": 1
+  },
+  "alerts": [
+    {
+      "container": "test_nginx",
+      "risk_level": "medium",
+      "runtime_score": 40,
+      "ai_anomaly_score": 28.509999999999998,
+      "cve_critical": 5,
+      "cve_high": 60,
+      "top_cve": {
+        "cve": "CVE-2026-6653",
+        "severity": "CRITICAL",
+        "package": "libxml2",
+        "installed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
+        "fixed_version": "N/A",
+        "title": "libxml2: mingw-libxml2: libxml2: Denial of Service via crafted XML input due to use-after-free"
+      },
+      "recommended_fix": "Update libtiff6 from 4.7.0-3+deb13u2 to 4.7.0-3+deb13u3",
+      "timestamp": "2026-07-24T10:10:54.817635+00:00"
+    }
+  ],
+  "findings": [
+    {
+      "container_id": "8ab1c7970dd6",
+      "name": "test_nginx",
+      "image": "nginx:latest",
+      "status": "running",
+      "cpu_percent": 0.0,
+      "memory_percent": 0.04942981183293641,
+      "network_rx_mb": 0.0011692047119140625,
+      "network_tx_mb": 0.0001201629638671875,
+      "pids": 9,
+      "restart_count": 0,
+      "ai_anomaly_score": 28.509999999999998,
+      "score": 40,
+      "risk_level": "medium",
+      "reasons": [
+        "Critical CVEs present: 5",
+        "High CVEs present: 60"
+      ],
+      "detectors_triggered": [
+        "vuln_cve"
+      ],
+      "cve_critical": 5,
+      "cve_high": 60,
+      "top_cves": [
+        {
+          "cve": "CVE-2026-6653",
+          "severity": "CRITICAL",
+          "package": "libxml2",
+          "installed_version": "2.12.7+dfsg+really2.9.14-2.1+deb13u3",
+          "fixed_version": "N/A",
+          "title": "libxml2: mingw-libxml2: libxml2: Denial of Service via crafted XML input due to use-after-free"
+        },
+        {
+          "cve": "CVE-2026-13221",
+          "severity": "CRITICAL",
+          "package": "perl-base",
+          "installed_version": "5.40.1-6",
+          "fixed_version": "N/A",
+          "title": "Perl versions through 5.43.9 produce silently incorrect regular expres ..."
+        },
+        {
+          "cve": "CVE-2026-42496",
+          "severity": "CRITICAL",
+          "package": "perl-base",
+          "installed_version": "5.40.1-6",
+          "fixed_version": "N/A",
+          "title": "perl-archive-tar: perl-archive-tar: Path traversal via crafted symlinks allows arbitrary file access"
+        },
+        {
+          "cve": "CVE-2026-57433",
+          "severity": "CRITICAL",
+          "package": "perl-base",
+          "installed_version": "5.40.1-6",
+          "fixed_version": "N/A",
+          "title": "Storable versions before 3.41 for Perl have a signed integer overflow  ..."
+        },
+        {
+          "cve": "CVE-2026-8376",
+          "severity": "CRITICAL",
+          "package": "perl-base",
+          "installed_version": "5.40.1-6",
+          "fixed_version": "N/A",
+          "title": "perl: Perl: Heap buffer overflow when compiling regular expressions on 32-bit builds"
+        },
+        {
+          "cve": "CVE-2026-53615",
+          "severity": "HIGH",
+          "package": "bsdutils",
+          "installed_version": "1:2.41-5",
+          "fixed_version": "N/A",
+          "title": "[Integer Overflow or Wraparound in libblkid/src/partitions/dos.c]"
+        },
+        {
+          "cve": "CVE-2026-12064",
+          "severity": "HIGH",
+          "package": "curl",
+          "installed_version": "8.14.1-2+deb13u4",
+          "fixed_version": "N/A",
+          "title": "curl: curl: SSH host verification bypass when using schemeless URLs with SFTP/SCP"
+        },
+        {
+          "cve": "CVE-2026-8286",
+          "severity": "HIGH",
+          "package": "curl",
+          "installed_version": "8.14.1-2+deb13u4",
+          "fixed_version": "N/A",
+          "title": "curl: curl: Insecure connection establishment due to TLS configuration mismatch"
+        }
+      ],
+      "recommended_fixes": [
+        "Update libtiff6 from 4.7.0-3+deb13u2 to 4.7.0-3+deb13u3"
+      ],
+      "timestamp": "2026-07-24T10:10:54.817635+00:00"
+    }
+  ]
+}

@@ -42,3 +42,16 @@ def test_dashboard_authorized(client):
 def test_control_panel_status_unauthorized(client):
     rv = client.get('/api/control-panel/status')
     assert rv.status_code == 401
+
+def test_metrics_endpoint(client):
+    rv = client.get('/metrics')
+    assert rv.status_code == 200
+    metrics_output = rv.data.decode('utf-8')
+    for metric in [
+        "container_risk_score",
+        "container_anomaly_score",
+        "cve_count",
+        "audit_runs_total",
+        "dashboard_auth_failures_total"
+    ]:
+        assert metric in metrics_output

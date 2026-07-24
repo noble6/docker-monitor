@@ -60,3 +60,23 @@ def test_cloud_cve_fetcher(monkeypatch):
     result = fetcher.fetch_severity(["CVE-2021-44228"])
     assert "CVE-2021-44228" in result
     assert result["CVE-2021-44228"] == "CRITICAL"
+
+def test_cloud_cve_offline_mode(monkeypatch):
+    import requests
+    from cloud_cve import CloudCVEFetcher
+    
+    def mock_get(*args, **kwargs):
+        raise requests.exceptions.ConnectionError("Mocked network error")
+        
+    monkeypatch.setattr(requests, "get", mock_get)
+    monkeypatch.setenv("OFFLINE_MODE", "true")
+    
+    fetcher = CloudCVEFetcher({"cloud": {"enabled": True}})
+    
+    monkeypatch.setattr(fetcher, "load_cache", lambda: {"CVE-1234": "HIGH"})
+    monkeypatch.setattr(fetcher, "_is_cache_stale", lambda: True)
+    
+    result = fetcher.fetch_severity(["CVE-1234", "CVE-9999"])
+    assert "CVE-1234" in result
+    assert result["CVE-1234"] == "HIGH"
+    assert result["CVE-9999"] == "UNKNOWN"

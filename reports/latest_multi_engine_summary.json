@@ -1,0 +1,36 @@
+{
+  "timestamp": "2026-07-24T15:40:49.532942",
+  "vulnerable": {
+    "critical": 17,
+    "high": 153,
+    "medium": 485,
+    "low": 305,
+    "fatal": 3,
+    "warn": 2,
+    "packages": 0,
+    "engines_active": 2,
+    "cloud_verified_cves": 960,
+    "ai_risk_score": 99.98
+  },
+  "hardened": {
+    "critical": 6,
+    "high": 8,
+    "medium": 30,
+    "low": 44,
+    "fatal": 0,
+    "warn": 1,
+    "packages": 0,
+    "engines_active": 2,
+    "cloud_verified_cves": 88,
+    "ai_risk_score": 13.33
+  },
+  "comparison": {
+    "ai_risk_drop": 86.65,
+    "critical_drop": 11,
+    "high_drop": 145,
+    "engines_active": {
+      "vulnerable": 2,
+      "hardened": 2
+    }
+  }
+}

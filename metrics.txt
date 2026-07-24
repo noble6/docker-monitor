@@ -1,0 +1,56 @@
+# HELP python_gc_objects_collected_total Objects collected during gc
+# TYPE python_gc_objects_collected_total counter
+python_gc_objects_collected_total{generation="0"} 695.0
+python_gc_objects_collected_total{generation="1"} 78.0
+python_gc_objects_collected_total{generation="2"} 0.0
+# HELP python_gc_objects_uncollectable_total Uncollectable objects found during GC
+# TYPE python_gc_objects_uncollectable_total counter
+python_gc_objects_uncollectable_total{generation="0"} 0.0
+python_gc_objects_uncollectable_total{generation="1"} 0.0
+python_gc_objects_uncollectable_total{generation="2"} 0.0
+# HELP python_gc_collections_total Number of times this generation was collected
+# TYPE python_gc_collections_total counter
+python_gc_collections_total{generation="0"} 116.0
+python_gc_collections_total{generation="1"} 10.0
+python_gc_collections_total{generation="2"} 0.0
+# HELP python_info Python platform information
+# TYPE python_info gauge
+python_info{implementation="CPython",major="3",minor="14",patchlevel="6",version="3.14.6"} 1.0
+# HELP process_virtual_memory_bytes Virtual memory size in bytes.
+# TYPE process_virtual_memory_bytes gauge
+process_virtual_memory_bytes 1.070723072e+09
+# HELP process_resident_memory_bytes Resident memory size in bytes.
+# TYPE process_resident_memory_bytes gauge
+process_resident_memory_bytes 1.72568576e+08
+# HELP process_start_time_seconds Start time of the process since unix epoch in seconds.
+# TYPE process_start_time_seconds gauge
+process_start_time_seconds 1.78488706053e+09
+# HELP process_cpu_seconds_total Total user and system CPU time spent in seconds.
+# TYPE process_cpu_seconds_total counter
+process_cpu_seconds_total 2.3000000000000003
+# HELP process_open_fds Number of open file descriptors.
+# TYPE process_open_fds gauge
+process_open_fds 15.0
+# HELP process_max_fds Maximum number of open file descriptors.
+# TYPE process_max_fds gauge
+process_max_fds 1024.0
+# HELP container_risk_score Container risk score
+# TYPE container_risk_score gauge
+# HELP container_anomaly_score Container AI anomaly score
+# TYPE container_anomaly_score gauge
+# HELP cve_count Count of CVEs per scan
+# TYPE cve_count gauge
+cve_count{severity="critical"} 0.0
+cve_count{severity="high"} 0.0
+# HELP audit_runs_total Total number of audit runs triggered
+# TYPE audit_runs_total counter
+audit_runs_total 1.0
+# HELP audit_runs_created Total number of audit runs triggered
+# TYPE audit_runs_created gauge
+audit_runs_created 1.784887062339674e+09
+# HELP dashboard_auth_failures_total Total dashboard auth failures
+# TYPE dashboard_auth_failures_total counter
+dashboard_auth_failures_total 1.0
+# HELP dashboard_auth_failures_created Total dashboard auth failures
+# TYPE dashboard_auth_failures_created gauge
+dashboard_auth_failures_created 1.7848870623396862e+09
