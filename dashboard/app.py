@@ -15,6 +15,11 @@ from pathlib import Path
 from typing import Any, Dict, List, Optional
 
 from flask import Flask, jsonify, render_template, request, send_file
+import sys
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from logger import setup_logger
+
+logger = setup_logger("dashboard")
 
 
 DASHBOARD_DIR = Path(__file__).resolve().parent
@@ -58,12 +63,14 @@ from flask import Flask, jsonify, render_template, request, send_file, session, 
 from flask_limiter import Limiter
 from flask_limiter.util import get_remote_address
 from prometheus_client import generate_latest, Gauge, Counter, CONTENT_TYPE_LATEST
+from flask_wtf.csrf import CSRFProtect
 
 RISK_SCORE_GAUGE = Gauge("container_risk_score", "Container risk score", ["container_name"])
 ANOMALY_SCORE_GAUGE = Gauge("container_anomaly_score", "Container AI anomaly score", ["container_name"])
 CVE_GAUGE = Gauge("cve_count", "Count of CVEs per scan", ["severity"])
 AUDIT_RUNS = Counter("audit_runs_total", "Total number of audit runs triggered")
 AUTH_FAILURES = Counter("dashboard_auth_failures_total", "Total dashboard auth failures")
+POLICY_VIOLATIONS = Gauge("policy_violations_active", "Current active OPA policy violations", ["rule"])
 
 if hasattr(sys, '_MEIPASS'):
     template_folder = os.path.join(sys._MEIPASS, 'dashboard', 'templates')
@@ -73,7 +80,20 @@ else:
     static_folder = str(DASHBOARD_DIR / "static")
 
 app = Flask(__name__, template_folder=template_folder, static_folder=static_folder)
-app.secret_key = os.getenv("SECRET_KEY", "cybersec-dev-secret-key-change-me")
+
+# Security & Session Configuration
+env_secret = os.getenv("SECRET_KEY")
+if not env_secret and os.getenv("APP_ENV") == "production":
+    raise RuntimeError("SECRET_KEY environment variable is required in production!")
+app.secret_key = env_secret or "cybersec-dev-secret-key-change-me"
+
+app.config.update(
+    SESSION_COOKIE_SECURE=True,
+    SESSION_COOKIE_HTTPONLY=True,
+    SESSION_COOKIE_SAMESITE="Lax",
+)
+
+csrf = CSRFProtect(app)
 
 limiter = Limiter(
     get_remote_address,
@@ -160,12 +180,15 @@ def require_dashboard_auth(view_func):
 @limiter.limit("10 per minute")
 def login():
     if request.method == "POST":
-        username = request.form.get("username", "")
-        password = request.form.get("password", "")
-        if compare_digest(username, CONTROL_USER) and compare_digest(password, CONTROL_PASSWORD):
+        user = request.form.get("username", "")
+        pwd = request.form.get("password", "")
+        if compare_digest(user, CONTROL_USER) and compare_digest(pwd, CONTROL_PASSWORD):
+            from flask import session
             session["authenticated"] = True
+            logger.info("Successful login", extra={"extra_fields": {"event": "login_success", "user": user, "ip": request.remote_addr}})
             return redirect(url_for("index"))
         AUTH_FAILURES.inc()
+        logger.warning("Failed login attempt", extra={"extra_fields": {"event": "login_failure", "user": user, "ip": request.remote_addr}})
         return render_template("login.html", error="Invalid credentials")
     return render_template("login.html")
 
@@ -298,10 +321,22 @@ def index():
     """Main dashboard page."""
     report = load_latest_report()
     runtime = load_runtime_findings()
+    
+    multi_file = REPORTS_DIR / "latest_multi_engine_summary.json"
+    policy_data = {}
+    if multi_file.exists():
+        try:
+            with open(multi_file, "r", encoding="utf-8") as f:
+                audit_data = json.load(f)
+                policy_data = audit_data.get("policy_evaluations", {})
+        except Exception:
+            pass
+            
     return render_template(
         "dashboard.html",
         report=report,
         runtime=runtime,
+        policy_data=policy_data,
     )
 
 
@@ -574,28 +609,84 @@ def metrics():
     CVE_GAUGE.labels(severity="critical").set(summary.get("total_cve_critical", 0))
     CVE_GAUGE.labels(severity="high").set(summary.get("total_cve_high", 0))
     
+    multi_file = REPORTS_DIR / "latest_multi_engine_summary.json"
+    if multi_file.exists():
+        try:
+            with open(multi_file, "r", encoding="utf-8") as f:
+                audit_data = json.load(f)
+                policy_eval = audit_data.get("policy_evaluations", {})
+                violations = policy_eval.get("violations", [])
+                
+                # Reset all to 0 to prevent stale metrics
+                POLICY_VIOLATIONS.labels(rule="deny_root_user").set(0)
+                POLICY_VIOLATIONS.labels(rule="deny_no_resource_limits").set(0)
+                POLICY_VIOLATIONS.labels(rule="deny_critical_cve").set(0)
+                POLICY_VIOLATIONS.labels(rule="deny_latest_tag").set(0)
+
+                for v in violations:
+                    if "deny_root_user" in v:
+                        POLICY_VIOLATIONS.labels(rule="deny_root_user").inc()
+                    elif "deny_no_resource_limits" in v:
+                        POLICY_VIOLATIONS.labels(rule="deny_no_resource_limits").inc()
+                    elif "deny_critical_cve" in v:
+                        POLICY_VIOLATIONS.labels(rule="deny_critical_cve").inc()
+                    elif "deny_latest_tag" in v:
+                        POLICY_VIOLATIONS.labels(rule="deny_latest_tag").inc()
+        except Exception:
+            pass
+            
     return generate_latest(), 200, {'Content-Type': CONTENT_TYPE_LATEST}
 
 
 @app.route("/health")
 def health():
     """Health check endpoint."""
-    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat()})
+    import db
+    db_ok = db.check_connection()
+    version = "2.0.0"
+    try:
+        with open(PROJECT_ROOT / "VERSION") as f:
+            version = f.read().strip()
+    except Exception:
+        pass
+        
+    if not db_ok:
+        return jsonify({"status": "unhealthy", "error": "DB connection failed", "timestamp": datetime.now().isoformat(), "version": version}), 500
+    return jsonify({"status": "healthy", "timestamp": datetime.now().isoformat(), "version": version})
 
+
+@app.errorhandler(Exception)
+def handle_exception(e):
+    from werkzeug.exceptions import HTTPException
+    if isinstance(e, HTTPException):
+        return e.get_response()
+    # Log unhandled exceptions with traceback
+    logger.error("Unhandled exception", exc_info=e, extra={"extra_fields": {"event": "unhandled_exception", "path": request.path}})
+    if request.path.startswith("/api/"):
+        return jsonify({"success": False, "error": str(e)}), 500
+    return "Internal Server Error", 500
 
 if __name__ == "__main__":
     REPORTS_DIR.mkdir(exist_ok=True)
     RUNTIME_DIR.mkdir(exist_ok=True)
-
-    print("=" * 70)
-    print("Container Security Audit Dashboard")
-    print("=" * 70)
-    print("Dashboard URL: http://localhost:8080")
-    print(f"Project Root: {PROJECT_ROOT}")
-    print(f"Reports Directory: {REPORTS_DIR.resolve()}")
-    print(f"Control Authentication: {'enabled' if CONTROL_AUTH_ENABLED else 'disabled'}")
-    print("=" * 70)
-
+    
+    import signal
+    import sys
+    
+    def handle_sigterm(*args):
+        logger.info("Received SIGTERM, initiating graceful shutdown...", extra={"extra_fields": {"event": "graceful_shutdown"}})
+        # Waitress natively shuts down on SIGTERM so this is just for logging
+        sys.exit(0)
+        
+    signal.signal(signal.SIGTERM, handle_sigterm)
+    
     port = int(os.getenv("PORT", "8080"))
     debug_enabled = os.getenv("FLASK_DEBUG", "0") == "1"
-    app.run(host="0.0.0.0", port=port, debug=debug_enabled)
+    
+    if os.environ.get("FLASK_ENV") == "production":
+        logger.info("Starting Waitress production server", extra={"extra_fields": {"event": "server_start"}})
+        from waitress import serve
+        serve(app, host="0.0.0.0", port=port)
+    else:
+        logger.info("Starting Flask development server", extra={"extra_fields": {"event": "server_start"}})
+        app.run(host="0.0.0.0", port=port, debug=debug_enabled)

@@ -1,36 +1,126 @@
 {
-  "timestamp": "2026-07-24T15:40:49.532942",
+  "timestamp": "2026-07-25T23:45:13.758756",
   "vulnerable": {
-    "critical": 17,
+    "critical": 18,
     "high": 153,
-    "medium": 485,
-    "low": 305,
+    "medium": 504,
+    "low": 313,
     "fatal": 3,
     "warn": 2,
     "packages": 0,
     "engines_active": 2,
-    "cloud_verified_cves": 960,
-    "ai_risk_score": 99.98
+    "cloud_verified_cves": 988,
+    "config": {
+      "Cmd": [
+        "python",
+        "app.py"
+      ],
+      "Env": [
+        "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "PYTHON_VERSION=3.14.6",
+        "PYTHON_SHA256=143b1dddefaec3bd2e21e3b839b34a2b7fb9842272883c576420d605e9f30c63",
+        "API_KEY=super_secret_api_key_12345",
+        "SECRET_TOKEN=hardcoded_token_xyz789",
+        "APP_ENV=production",
+        "FLASK_DEBUG=1",
+        "FLASK_APP=app.py"
+      ],
+      "ExposedPorts": {
+        "22/tcp": {},
+        "3000/tcp": {},
+        "443/tcp": {},
+        "5000/tcp": {},
+        "8080/tcp": {}
+      },
+      "Labels": {
+        "com.docker.compose.image.builder": "classic"
+      },
+      "WorkingDir": "/app",
+      "RepoTags": [
+        "flask-app-vulnerable:latest"
+      ]
+    },
+    "k8s_limits": {},
+    "ai_risk_score": 99.99
   },
   "hardened": {
     "critical": 6,
     "high": 8,
-    "medium": 30,
-    "low": 44,
+    "medium": 31,
+    "low": 45,
     "fatal": 0,
     "warn": 1,
     "packages": 0,
     "engines_active": 2,
-    "cloud_verified_cves": 88,
-    "ai_risk_score": 13.33
+    "cloud_verified_cves": 90,
+    "config": {
+      "Cmd": [
+        "python",
+        "-u",
+        "app.py"
+      ],
+      "Env": [
+        "PATH=/usr/local/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin",
+        "LANG=C.UTF-8",
+        "GPG_KEY=7169605F62C751356D054A26A821E680E5FA6305",
+        "PYTHON_VERSION=3.12.13",
+        "PYTHON_SHA256=c08bc65a81971c1dd5783182826503369466c7e67374d1646519adf05207b684",
+        "APP_ENV=production",
+        "PYTHONUNBUFFERED=1",
+        "PYTHONDONTWRITEBYTECODE=1",
+        "FLASK_APP=app.py",
+        "FLASK_DEBUG=0"
+      ],
+      "ExposedPorts": {
+        "5000/tcp": {}
+      },
+      "Healthcheck": {
+        "Interval": 30000000000,
+        "Retries": 3,
+        "StartPeriod": 5000000000,
+        "Test": [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:5000/health').read()\" || exit 1"
+        ],
+        "Timeout": 3000000000
+      },
+      "Labels": {
+        "com.docker.compose.image.builder": "classic",
+        "description": "Hardened Flask application container",
+        "maintainer": "noble17@duck.com",
+        "version": "1.0.0"
+      },
+      "User": "appuser",
+      "WorkingDir": "/app",
+      "RepoTags": [
+        "flask-app-hardened:latest"
+      ]
+    },
+    "k8s_limits": {
+      "memory": "128Mi",
+      "cpu": "200m"
+    },
+    "ai_risk_score": 13.47
   },
   "comparison": {
-    "ai_risk_drop": 86.65,
-    "critical_drop": 11,
+    "ai_risk_drop": 86.52,
+    "critical_drop": 12,
     "high_drop": 145,
     "engines_active": {
       "vulnerable": 2,
       "hardened": 2
     }
+  },
+  "policy_evaluations": {
+    "pass": false,
+    "violations": [
+      "[hardened] deny_critical_cve: Contains 6 critical CVEs",
+      "[hardened] deny_latest_tag: Image uses the ':latest' tag (flask-app-hardened:latest)",
+      "[vulnerable] deny_critical_cve: Contains 18 critical CVEs",
+      "[vulnerable] deny_latest_tag: Image uses the ':latest' tag (flask-app-vulnerable:latest)",
+      "[vulnerable] deny_no_resource_limits: No resource limits defined in k8s manifest",
+      "[vulnerable] deny_root_user: Container runs as root (no User directive)"
+    ],
+    "not_applicable": []
   }
 }

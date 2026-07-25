@@ -17,21 +17,12 @@ from rich.console import Console
 from rich.panel import Panel
 
 from ai_security_model import RuleBasedRiskScorer
+from logger import setup_logger
+import time
 
 # Setup logging
-os.makedirs("logs", exist_ok=True)
-logger = logging.getLogger("audit")
+logger = setup_logger("audit")
 logger.setLevel(logging.INFO)
-
-fh = logging.FileHandler("logs/audit.log")
-fh.setLevel(logging.INFO)
-fh.setFormatter(logging.Formatter('%(asctime)s - %(levelname)s - %(message)s'))
-logger.addHandler(fh)
-
-ch = logging.StreamHandler(sys.stdout)
-ch.setLevel(logging.INFO)
-ch.setFormatter(logging.Formatter('%(message)s'))
-logger.addHandler(ch)
 
 console = Console()
 
@@ -189,6 +180,40 @@ def aggregate_scan(image_name: str, output_file: str) -> dict[str, Any]:
         logger.error(f"Cloud CVE sync failed: {e}")
         cloud_data = {}
 
+    # Capture image configuration for Policy-as-Code (OPA)
+    inspect_result = run_command(["docker", "inspect", image_name])
+    image_config = {}
+    if inspect_result.returncode == 0:
+        try:
+            inspect_data = json.loads(inspect_result.stdout)
+            if inspect_data:
+                image_config = inspect_data[0].get("Config", {})
+                image_config["RepoTags"] = inspect_data[0].get("RepoTags", [])
+        except json.JSONDecodeError:
+            pass
+
+    # Extract resource limits from k8s manifests if they exist
+    k8s_limits = None
+    try:
+        import yaml
+        if Path("k8s").exists():
+            for fn in os.listdir("k8s"):
+                if fn.endswith(".yaml"):
+                    with open(os.path.join("k8s", fn)) as f:
+                        docs = yaml.safe_load_all(f)
+                        for doc in docs:
+                            if not doc or doc.get("kind") != "Deployment":
+                                continue
+                            try:
+                                containers = doc["spec"]["template"]["spec"]["containers"]
+                                for c in containers:
+                                    if c.get("image", "").startswith(image_name):
+                                        k8s_limits = c.get("resources", {}).get("limits", {})
+                            except KeyError:
+                                pass
+    except Exception as e:
+        logger.error(f"Error parsing k8s manifests: {e}")
+
     agg = {
         "critical": len(t_cves["CRITICAL"].union(g_cves["CRITICAL"])),
         "high": len(t_cves["HIGH"].union(g_cves["HIGH"])),
@@ -199,6 +224,8 @@ def aggregate_scan(image_name: str, output_file: str) -> dict[str, Any]:
         "packages": syft["packages"],
         "engines_active": trivy["engine_enabled"] + dockle["engine_enabled"] + syft["engine_enabled"] + grype["engine_enabled"],
         "cloud_verified_cves": len(cloud_data),
+        "config": image_config,
+        "k8s_limits": k8s_limits,
     }
 
     model = RuleBasedRiskScorer()
@@ -224,6 +251,9 @@ def print_comparison(vulnerable: dict[str, Any], hardened: dict[str, Any]):
         logger.info(f"{key:<28}{str(v):<16}{str(h):<16}{str(d):<10}")
 
 def main():
+    start_time = time.time()
+    logger.info("Audit started", extra={"extra_fields": {"event": "audit_start"}})
+    
     log_header("Container Security Audit Tool - Multi Engine + AI")
     if not check_tool_installed("docker"):
         logger.error("Docker is not installed")
@@ -241,6 +271,7 @@ def main():
     vulnerable_stats = aggregate_scan(vulnerable_image, "scan_vulnerable.txt")
     hardened_stats = aggregate_scan(hardened_image, "scan_hardened.txt")
 
+    log_header("Comparison Results")
     print_comparison(vulnerable_stats, hardened_stats)
 
     summary = {
@@ -274,11 +305,36 @@ def main():
         logger.error(f"Alerting failed: {e}")
 
     Path("reports").mkdir(exist_ok=True)
-    with open("reports/latest_multi_engine_summary.json", "w", encoding="utf-8") as f:
+    report_path = "reports/latest_multi_engine_summary.json"
+    with open(report_path, "w", encoding="utf-8") as f:
         json.dump(summary, f, indent=2)
 
-    logger.info("Audit completed")
-    logger.info("Saved: scan_vulnerable.txt, scan_hardened.txt, reports/latest_multi_engine_summary.json")
+    try:
+        from policy_evaluator import evaluate_policies
+        log_header("Policy-as-Code Evaluation (OPA)")
+        eval_result = evaluate_policies(report_path)
+        
+        # Append policy results to the JSON report
+        summary["policy_evaluations"] = eval_result
+        with open(report_path, "w", encoding="utf-8") as f:
+            json.dump(summary, f, indent=2)
+            
+        if not eval_result.get("pass", False):
+            logger.error("CI Build Failed: Policy violations detected!")
+            for v in eval_result.get("violations", []):
+                logger.error(f" - {v}")
+            sys.exit(1)
+        else:
+            logger.info("All security policies passed successfully.")
+            
+    except ImportError:
+        logger.warning("policy_evaluator module not found, skipping policy evaluation.")
+    except Exception as e:
+        logger.error(f"Policy evaluation encountered an error: {e}")
+        sys.exit(1)
+
+    duration = time.time() - start_time
+    logger.info("Audit completed", extra={"extra_fields": {"event": "audit_complete", "duration_seconds": round(duration, 2)}})
 
 if __name__ == "__main__":
     try:

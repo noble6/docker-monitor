@@ -1,0 +1,8 @@
+# Policy exceptions for CI pipeline
+# Each exception must specify the rule, a documented reason, and an expiry date.
+
+exceptions:
+  hardened:
+    deny_no_resource_limits:
+      reason: "Resource limits are managed externally by the orchestrator (Kubernetes/ECS), not embedded in the image"
+      expiry: "2030-01-01"

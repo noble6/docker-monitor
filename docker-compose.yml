@@ -69,14 +69,16 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      - ./reports:/app/reports
-      - ./runtime:/app/runtime
+      - reports_data:/app/reports
+      - runtime_data:/app/runtime
+      - logs_data:/app/logs
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
       - FLASK_ENV=production
       - PROJECT_ROOT=/app
-      - DASHBOARD_AUTH_USER=${DASHBOARD_AUTH_USER}
-      - DASHBOARD_AUTH_PASSWORD=${DASHBOARD_AUTH_PASSWORD}
+      - DASHBOARD_AUTH_USER=${DASHBOARD_AUTH_USER:-admin}
+      - DASHBOARD_AUTH_PASSWORD=${DASHBOARD_AUTH_PASSWORD:-password}
+      - SECRET_KEY=${SECRET_KEY:-thisisasupersecretkey}
     depends_on:
       - flask-vulnerable
       - flask-hardened
@@ -94,3 +96,8 @@ networks:
     ipam:
       config:
         - subnet: 172.20.0.0/16
+
+volumes:
+  reports_data:
+  runtime_data:
+  logs_data:

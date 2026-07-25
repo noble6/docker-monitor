@@ -10,3 +10,4 @@ Flask>=2.0.0
 Flask-Limiter>=3.0.0
 numpy<2.5.0
 prometheus_client>=0.17.0
+flask-wtf==1.2.1

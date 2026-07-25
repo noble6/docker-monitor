@@ -20,6 +20,9 @@ COPY report_generator.py /app/report_generator.py
 COPY config.yaml /app/config.yaml
 COPY Dockerfile.vuln /app/Dockerfile.vuln
 COPY Dockerfile.hardened /app/Dockerfile.hardened
+COPY logger.py /app/logger.py
+COPY db.py /app/db.py
+COPY VERSION /app/VERSION
 COPY app /app/app
 COPY dashboard /app/dashboard
 

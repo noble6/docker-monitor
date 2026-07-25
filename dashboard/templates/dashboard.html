@@ -3,6 +3,7 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
   <title>CyberSec Control Center</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
@@ -203,8 +204,21 @@
 
     {% if report %}
     <section class="grid">
-      <div class="card"><h3>Image Size Reduction</h3><div class="value">{{ "%.1f"|format(report.comparison.size_reduction_percent) }}%</div><div>{{ report.comparison.size_vulnerable }} → {{ report.comparison.size_hardened }}</div></div>
-      <div class="card"><h3>Vulnerability Reduction</h3><div class="value">{{ "%.1f"|format(report.comparison.vuln_reduction_percent) }}%</div><div>{{ report.comparison.vuln_vulnerable }} → {{ report.comparison.vuln_hardened }} CVEs</div></div>
+      <div class="card">
+        <h3>Policy Compliance</h3>
+        {% if policy_data and policy_data.pass %}
+        <div class="value" style="color:var(--good)">PASS</div>
+        <div>No Violations</div>
+        {% elif policy_data %}
+        <div class="value" style="color:var(--bad)">FAIL</div>
+        <div>{{ policy_data.violations | length }} Violations</div>
+        {% else %}
+        <div class="value" style="color:var(--muted)">N/A</div>
+        <div>Run Audit</div>
+        {% endif %}
+      </div>
+      <div class="card"><h3>Image Size Reduction</h3><div class="value">{{ "%.1f"|format(report.comparison.size_reduction_percent) if report.comparison.size_reduction_percent is defined else 0 }}%</div><div>{{ report.comparison.size_vulnerable if report.comparison.size_vulnerable is defined else 0 }} → {{ report.comparison.size_hardened if report.comparison.size_hardened is defined else 0 }}</div></div>
+      <div class="card"><h3>Vulnerability Reduction</h3><div class="value">{{ "%.1f"|format(report.comparison.vuln_reduction_percent) if report.comparison.vuln_reduction_percent is defined else 0 }}%</div><div>{{ report.comparison.vuln_vulnerable if report.comparison.vuln_vulnerable is defined else 0 }} → {{ report.comparison.vuln_hardened if report.comparison.vuln_hardened is defined else 0 }} CVEs</div></div>
       <div class="card"><h3>Critical (Hardened)</h3><div class="value" style="color:var(--bad)">{{ report.hardened.critical }}</div><div>Fixed: {{ report.vulnerable.critical - report.hardened.critical }}</div></div>
       <div class="card"><h3>Last Scan</h3><div class="value" style="font-size:1.1rem">{{ report.timestamp[:10] if report.timestamp else 'N/A' }}</div><div>{{ report.timestamp[11:19] if report.timestamp else '' }}</div></div>
     </section>
@@ -269,6 +283,7 @@
     const rootEl = document.documentElement;
     const themeBtn = document.getElementById('themeBtn');
     const logEl = document.getElementById('control-log');
+    const csrfToken = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
 
     function applyTheme(theme) {
       rootEl.setAttribute('data-theme', theme);
@@ -338,7 +353,7 @@
       const endpoint = protect ? `/api/control-panel/protect/${containerId}` : `/api/control-panel/unprotect/${containerId}`;
       const res = await fetch(endpoint, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({ container_name: containerName })
       });
       const data = await res.json();
@@ -349,7 +364,7 @@
     async function containerAction(container, action) {
       const res = await fetch('/api/control-panel/container-action', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({ container, action })
       });
       const data = await res.json();
@@ -359,7 +374,7 @@
 
     async function runRuntimeSnapshot() {
       appendLog('Running runtime snapshot...');
-      const res = await fetch('/api/control-panel/runtime/snapshot', { method: 'POST' });
+      const res = await fetch('/api/control-panel/runtime/snapshot', { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
       const data = await res.json();
       appendLog(`Runtime snapshot ${data.success ? 'completed' : 'failed'} (exit ${data.exit_code})`);
     }
@@ -368,7 +383,7 @@
       appendLog('Generating runtime security report...');
       const res = await fetch('/api/control-panel/report/runtime', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', 'X-CSRFToken': csrfToken },
         body: JSON.stringify({ format: 'json' })
       });
       const data = await res.json();
@@ -377,7 +392,7 @@
 
     async function runAuditNow() {
       appendLog('Running full audit, this may take time...');
-      const res = await fetch('/api/control-panel/audit/run', { method: 'POST' });
+      const res = await fetch('/api/control-panel/audit/run', { method: 'POST', headers: { 'X-CSRFToken': csrfToken } });
       const data = await res.json();
       appendLog(`Audit ${data.success ? 'completed' : 'failed'} (exit ${data.exit_code})`);
     }

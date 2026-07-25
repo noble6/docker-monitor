@@ -4,7 +4,9 @@ from pathlib import Path
 from datetime import datetime
 from typing import Dict, Any, List
 
-DB_PATH = Path("runtime/docker_monitor.db")
+import os
+PROJECT_ROOT = Path(os.environ.get("PROJECT_ROOT", Path(__file__).resolve().parent))
+DB_PATH = PROJECT_ROOT / "runtime" / "docker_monitor.db"
 
 def init_db():
     conn = sqlite3.connect(DB_PATH)
@@ -140,3 +142,13 @@ def get_runtime_events(container_name: str = None, min_score: int = None, limit:
 
 # Initialize DB on import
 init_db()
+
+def check_connection() -> bool:
+    try:
+        conn = sqlite3.connect(DB_PATH)
+        cursor = conn.cursor()
+        cursor.execute("SELECT 1")
+        conn.close()
+        return True
+    except Exception:
+        return False

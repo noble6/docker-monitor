@@ -16,7 +16,8 @@ import logging
 
 __version__ = "2.0.0"
 
-logging.basicConfig(level=logging.INFO, format='[%(levelname)s] %(message)s')
+from logger import setup_logger
+logger = setup_logger("realtime_engine")
 
 import json
 import os
@@ -600,13 +601,14 @@ class RuntimeThreatEngine:
         if not self.enabled:
             logging.info("runtime monitoring disabled")
             return
-        logging.info(f"Runtime Threat Engine running every {self.interval_seconds}s")
+        logger = logging.getLogger("realtime_engine")
+        logger.info(f"Runtime Threat Engine running every {self.interval_seconds}s", extra={"extra_fields": {"interval": self.interval_seconds}})
         while True:
             try:
                 payload = self.run_once()
                 s = payload["summary"]
-                logging.info(
-                    f"monitored={s['containers_monitored']} critical={s['critical_alerts']} "
+                logger.info(
+                    f"cycle complete: monitored={s['containers_monitored']} critical={s['critical_alerts']} "
                     f"high={s['high_alerts']} cveCritical={s['total_cve_critical']} ai_mean={s['mean_ai_anomaly_score']}"
                 )
             except KeyboardInterrupt:

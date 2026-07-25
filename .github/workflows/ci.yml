@@ -33,28 +33,26 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-
-      - name: Build vulnerable image
-        run: docker build -f Dockerfile.vuln -t vulnerable-image:latest .
-
-      - name: Build hardened image
-        run: docker build -f Dockerfile.hardened -t hardened-image:latest .
-
-      - name: Run Trivy vulnerability scanner on vulnerable image
-        uses: aquasecurity/trivy-action@master
+        
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          image-ref: 'vulnerable-image:latest'
-          format: 'table'
-          exit-code: '0'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
+          python-version: '3.11'
+          
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Run Trivy vulnerability scanner on hardened image
-        uses: aquasecurity/trivy-action@master
-        with:
-          image-ref: 'hardened-image:latest'
-          format: 'table'
-          exit-code: '1'
-          ignore-unfixed: true
-          vuln-type: 'os,library'
-          severity: 'CRITICAL'
+      - name: Install Open Policy Agent (OPA)
+        run: |
+          mkdir -p bin
+          curl -sL -o bin/opa https://openpolicyagent.org/downloads/v0.61.0/opa_linux_amd64_static
+          chmod +x bin/opa
+          echo "$PWD/bin" >> $GITHUB_PATH
+
+      - name: Run Multi-Engine Scan & OPA Policy Evaluation
+        run: |
+          export OFFLINE_MODE=true
+          python audit.py
+        # The audit.py script evaluates policies using OPA and exits non-zero if violations exist

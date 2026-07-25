@@ -2,159 +2,44 @@
 
 stages:
   - build
+  - test
   - scan
-  - report
-  - deploy
 
 variables:
   DOCKER_DRIVER: overlay2
-  TRIVY_VERSION: "latest"
   SECURE_FILES_DOWNLOAD_PATH: '.'
 
-# Build vulnerable image
-build:vulnerable:
+build:
   stage: build
   image: docker:latest
   services:
     - docker:dind
   script:
-    - docker build -f Dockerfile.vuln -t $CI_REGISTRY_IMAGE/vulnerable:$CI_COMMIT_SHA .
-    - docker build -f Dockerfile.vuln -t $CI_REGISTRY_IMAGE/vulnerable:latest .
+    - docker build -f Dockerfile.vuln -t vulnerable-image:latest .
+    - docker build -f Dockerfile.hardened -t hardened-image:latest .
   tags:
     - docker
 
-# Build hardened image
-build:hardened:
-  stage: build
-  image: docker:latest
-  services:
-    - docker:dind
-  script:
-    - docker build -f Dockerfile.hardened -t $CI_REGISTRY_IMAGE/hardened:$CI_COMMIT_SHA .
-    - docker build -f Dockerfile.hardened -t $CI_REGISTRY_IMAGE/hardened:latest .
-  tags:
-    - docker
-
-# Trivy vulnerability scan
-scan:trivy:vulnerable:
-  stage: scan
-  image: aquasec/trivy:latest
-  script:
-    - trivy image --exit-code 0 --format json --output trivy-vulnerable.json $CI_REGISTRY_IMAGE/vulnerable:$CI_COMMIT_SHA
-    - trivy image --severity CRITICAL,HIGH --exit-code 0 $CI_REGISTRY_IMAGE/vulnerable:$CI_COMMIT_SHA
-  artifacts:
-    paths:
-      - trivy-vulnerable.json
-    expire_in: 30 days
-  dependencies:
-    - build:vulnerable
-  allow_failure: true
-
-scan:trivy:hardened:
-  stage: scan
-  image: aquasec/trivy:latest
-  script:
-    - trivy image --exit-code 0 --format json --output trivy-hardened.json $CI_REGISTRY_IMAGE/hardened:$CI_COMMIT_SHA
-    - trivy image --severity CRITICAL --exit-code 1 $CI_REGISTRY_IMAGE/hardened:$CI_COMMIT_SHA
-  artifacts:
-    paths:
-      - trivy-hardened.json
-    expire_in: 30 days
-  dependencies:
-    - build:hardened
-
-# Dockle security linting
-scan:dockle:vulnerable:
-  stage: scan
-  image: docker:latest
-  services:
-    - docker:dind
-  before_script:
-    - apk add --no-cache wget
-    - wget -q https://github.com/goodwithtech/dockle/releases/latest/download/dockle_Linux-64bit.tar.gz
-    - tar zxf dockle_Linux-64bit.tar.gz
-    - mv dockle /usr/local/bin/
-  script:
-    - dockle --exit-code 0 --format json --output dockle-vulnerable.json $CI_REGISTRY_IMAGE/vulnerable:$CI_COMMIT_SHA
-  artifacts:
-    paths:
-      - dockle-vulnerable.json
-    expire_in: 30 days
-  dependencies:
-    - build:vulnerable
-  allow_failure: true
-
-scan:dockle:hardened:
-  stage: scan
-  image: docker:latest
-  services:
-    - docker:dind
-  before_script:
-    - apk add --no-cache wget
-    - wget -q https://github.com/goodwithtech/dockle/releases/latest/download/dockle_Linux-64bit.tar.gz
-    - tar zxf dockle_Linux-64bit.tar.gz
-    - mv dockle /usr/local/bin/
-  script:
-    - dockle --exit-code 1 --exit-level warn --format json --output dockle-hardened.json $CI_REGISTRY_IMAGE/hardened:$CI_COMMIT_SHA
-  artifacts:
-    paths:
-      - dockle-hardened.json
-    expire_in: 30 days
-  dependencies:
-    - build:hardened
-
-# Generate comprehensive report
-report:generate:
-  stage: report
+test:
+  stage: test
   image: python:3.11-slim
   script:
-    - pip install pyyaml
+    - pip install -r requirements.txt pytest
+    - PYTHONPATH=. pytest tests/
+
+scan:
+  stage: scan
+  image: python:3.11-slim
+  services:
+    - docker:dind
+  variables:
+    DOCKER_HOST: tcp://docker:2375
+  before_script:
+    - apt-get update && apt-get install -y curl docker.io
+    - curl -sL -o /usr/local/bin/opa https://openpolicyagent.org/downloads/v0.61.0/opa_linux_amd64_static
+    - chmod +x /usr/local/bin/opa
+    - pip install -r requirements.txt
+  script:
+    - export OFFLINE_MODE=true
     - python audit.py
-    - python report_generator.py
-  artifacts:
-    paths:
-      - reports/
-      - scan_*.txt
-    reports:
-      junit: reports/audit_report.xml
-    expire_in: 90 days
-  dependencies:
-    - scan:trivy:vulnerable
-    - scan:trivy:hardened
-    - scan:dockle:vulnerable
-    - scan:dockle:hardened
-
-# Deploy to staging (only hardened image)
-deploy:staging:
-  stage: deploy
-  image: alpine:latest
-  script:
-    - echo "Deploying hardened image to staging..."
-    - echo "Image: $CI_REGISTRY_IMAGE/hardened:$CI_COMMIT_SHA"
-  only:
-    - develop
-  when: manual
-  environment:
-    name: staging
-    url: https://staging.example.com
-
-# Deploy to production (only hardened image, with approval)
-deploy:production:
-  stage: deploy
-  image: alpine:latest
-  script:
-    - echo "Deploying hardened image to production..."
-    - echo "Image: $CI_REGISTRY_IMAGE/hardened:$CI_COMMIT_SHA"
-  only:
-    - main
-  when: manual
-  environment:
-    name: production
-    url: "http://localhost:8080"  # TODO: replace with real URL :D
-  dependencies:
-    - report:generate
-  needs:
-    - job: scan:trivy:hardened
-      artifacts: true
-    - job: scan:dockle:hardened
-      artifacts: true
+    # This evaluates policies using OPA and exits non-zero if violations exist
