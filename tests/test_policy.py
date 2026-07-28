@@ -85,6 +85,22 @@ def test_deny_critical_cve_violation():
     fixture = {
         "vulnerable": {
             "critical": 5,
+            "critical_cves": ["CVE-1234", "CVE-5678", "CVE-9991", "CVE-9992", "CVE-9993"],
+            "k8s_limits": {"memory": "512Mi"},
+            "config": {
+                "User": "appuser",
+                "RepoTags": ["myimage:v1.0"]
+            }
+        }
+    }
+    res = evaluate_fixture(fixture)
+    assert res["pass"] is False
+    assert any("deny_critical_cve" in v for v in res["violations"])
+
+def test_deny_critical_cve_legacy_violation():
+    fixture = {
+        "vulnerable": {
+            "critical": 5,
             "k8s_limits": {"memory": "512Mi"},
             "config": {
                 "User": "appuser",

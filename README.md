@@ -174,7 +174,6 @@ CI Build Failed: Policy violations detected!
  - [hardened] deny_latest_tag: Image uses the ':latest' tag (flask-app-hardened:latest)
  - [hardened] deny_latest_tag: Image uses the ':latest' tag (hardened-image:latest)
  - [hardened] deny_latest_tag: Image uses the ':latest' tag (test-hardened-image:latest)
- - [vulnerable] deny_critical_cve: Contains 18 critical CVEs
  - [vulnerable] deny_latest_tag: Image uses the ':latest' tag (docker-monitor-vuln:latest)
  - [vulnerable] deny_latest_tag: Image uses the ':latest' tag (flask-app-vulnerable:latest)
  - [vulnerable] deny_latest_tag: Image uses the ':latest' tag (vulnerable-image:latest)

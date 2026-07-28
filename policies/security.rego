@@ -40,8 +40,22 @@ violations[msg] {
     is_object(image_data)
     image_data.critical != null
 
-    # Rule: deny_critical_cve
+    # Rule: deny_critical_cve (Array format)
     not is_exception(image_key, "deny_critical_cve")
+    some cve
+    cve = image_data.critical_cves[_]
+    not is_exception(image_key, cve)
+    msg := sprintf("[%s] deny_critical_cve: Contains critical CVE %s", [image_key, cve])
+}
+
+violations[msg] {
+    some image_key
+    image_data := input[image_key]
+    is_object(image_data)
+    
+    # Rule: deny_critical_cve (Legacy fallback for flat count)
+    not is_exception(image_key, "deny_critical_cve")
+    not object.get(image_data, "critical_cves", false)
     image_data.critical > 0
     msg := sprintf("[%s] deny_critical_cve: Contains %v critical CVEs", [image_key, image_data.critical])
 }

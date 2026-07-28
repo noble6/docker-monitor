@@ -1,1 +1,0 @@
-{"flask-app-vulnerable:2.0.0": {"critical": 3, "config": {"User": "root", "RepoTags": ["flask-app-vulnerable:2.0.0"]}, "k8s_limits": null}, "flask-app-hardened:2.0.0": {"critical": 0, "config": {"User": "appuser", "RepoTags": ["flask-app-hardened:2.0.0"]}, "k8s_limits": {}}}

@@ -6,3 +6,21 @@ exceptions:
     deny_no_resource_limits:
       reason: "Resource limits are managed externally by the orchestrator (Kubernetes/ECS), not embedded in the image"
       expiry: "2030-01-01"
+    CVE-2025-7458:
+      reason: "libsqlite3-0: SQLite integer overflow. No upstream fix available in debian 12 yet."
+      expiry: "2026-12-31"
+    CVE-2026-13221:
+      reason: "perl-base: Incorrect regular expressions. No upstream fix available in debian 12 yet."
+      expiry: "2026-12-31"
+    CVE-2026-42496:
+      reason: "perl-base: Path traversal via crafted symlinks. Fix deferred by upstream."
+      expiry: "2026-12-31"
+    CVE-2026-57433:
+      reason: "perl-base: Signed integer overflow. No upstream fix available in debian 12 yet."
+      expiry: "2026-12-31"
+    CVE-2026-8376:
+      reason: "perl-base: Heap buffer overflow when compiling regular expressions. No upstream fix available in debian 12 yet."
+      expiry: "2026-12-31"
+    CVE-2023-45853:
+      reason: "zlib1g: integer overflow in zipOpenNewFileInZip4_6. Debian will_not_fix."
+      expiry: "2030-01-01"

@@ -1,15 +1,16 @@
 {
-  "timestamp": "2026-07-25T23:45:13.758756",
+  "timestamp": "2026-07-28T09:28:36.847928",
   "vulnerable": {
-    "critical": 18,
-    "high": 153,
-    "medium": 504,
-    "low": 313,
-    "fatal": 3,
-    "warn": 2,
+    "critical": 0,
+    "critical_cves": [],
+    "high": 0,
+    "medium": 0,
+    "low": 0,
+    "fatal": 0,
+    "warn": 0,
     "packages": 0,
     "engines_active": 2,
-    "cloud_verified_cves": 988,
+    "cloud_verified_cves": 0,
     "config": {
       "Cmd": [
         "python",
@@ -32,27 +33,25 @@
         "5000/tcp": {},
         "8080/tcp": {}
       },
-      "Labels": {
-        "com.docker.compose.image.builder": "classic"
-      },
       "WorkingDir": "/app",
       "RepoTags": [
-        "flask-app-vulnerable:latest"
+        "flask-app-vulnerable:2.0.0"
       ]
     },
-    "k8s_limits": {},
-    "ai_risk_score": 99.99
+    "k8s_limits": null,
+    "ai_risk_score": 4.74
   },
   "hardened": {
-    "critical": 6,
-    "high": 8,
-    "medium": 31,
-    "low": 45,
+    "critical": 0,
+    "critical_cves": [],
+    "high": 0,
+    "medium": 0,
+    "low": 0,
     "fatal": 0,
-    "warn": 1,
+    "warn": 0,
     "packages": 0,
     "engines_active": 2,
-    "cloud_verified_cves": 90,
+    "cloud_verified_cves": 0,
     "config": {
       "Cmd": [
         "python",
@@ -85,7 +84,6 @@
         "Timeout": 3000000000
       },
       "Labels": {
-        "com.docker.compose.image.builder": "classic",
         "description": "Hardened Flask application container",
         "maintainer": "noble17@duck.com",
         "version": "1.0.0"
@@ -93,19 +91,16 @@
       "User": "appuser",
       "WorkingDir": "/app",
       "RepoTags": [
-        "flask-app-hardened:latest"
+        "flask-app-hardened:2.0.0"
       ]
     },
-    "k8s_limits": {
-      "memory": "128Mi",
-      "cpu": "200m"
-    },
-    "ai_risk_score": 13.47
+    "k8s_limits": null,
+    "ai_risk_score": 4.74
   },
   "comparison": {
-    "ai_risk_drop": 86.52,
-    "critical_drop": 12,
-    "high_drop": 145,
+    "ai_risk_drop": 0.0,
+    "critical_drop": 0,
+    "high_drop": 0,
     "engines_active": {
       "vulnerable": 2,
       "hardened": 2
@@ -114,13 +109,11 @@
   "policy_evaluations": {
     "pass": false,
     "violations": [
-      "[hardened] deny_critical_cve: Contains 6 critical CVEs",
-      "[hardened] deny_latest_tag: Image uses the ':latest' tag (flask-app-hardened:latest)",
-      "[vulnerable] deny_critical_cve: Contains 18 critical CVEs",
-      "[vulnerable] deny_latest_tag: Image uses the ':latest' tag (flask-app-vulnerable:latest)",
-      "[vulnerable] deny_no_resource_limits: No resource limits defined in k8s manifest",
       "[vulnerable] deny_root_user: Container runs as root (no User directive)"
     ],
-    "not_applicable": []
+    "not_applicable": [
+      "[hardened] deny_no_resource_limits: Not Applicable (No k8s manifest found for image)",
+      "[vulnerable] deny_no_resource_limits: Not Applicable (No k8s manifest found for image)"
+    ]
   }
 }

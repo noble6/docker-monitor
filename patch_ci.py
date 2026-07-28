@@ -1,57 +1,14 @@
-name: CI Pipeline
+import re
 
-on:
-  push:
-    branches: [ "main" ]
-  pull_request:
-    branches: [ "main" ]
+with open(".github/workflows/ci.yml", "r") as f:
+    ci = f.read()
 
-jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+# Remove old scanner installs and verify
+start_idx = ci.find("      - name: Install Scanner Engines")
+end_idx = ci.find("      - name: Run Multi-Engine Scan")
+ci = ci[:start_idx] + ci[end_idx:]
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest
-
-      - name: Run tests
-        run: PYTHONPATH=. pytest tests/
-
-  build-and-scan:
-    runs-on: ubuntu-latest
-    needs: test
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.11'
-          
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-
-      - name: Install Open Policy Agent (OPA)
-        run: |
-          mkdir -p bin
-          curl -sL -o bin/opa https://openpolicyagent.org/downloads/v0.61.0/opa_linux_amd64_static
-          chmod +x bin/opa
-          echo "$PWD/bin" >> $GITHUB_PATH
-
-      - name: Build Images
+build_and_scan_steps = """      - name: Build Images
         run: |
           docker build -f Dockerfile.vuln -t flask-app-vulnerable:2.0.0 .
           docker build -f Dockerfile.hardened -t flask-app-hardened:2.0.0 .
@@ -121,9 +78,9 @@ jobs:
           output-format: 'json'
         continue-on-error: true
       - run: mv results.json grype-flask-app-hardened.json || true
+"""
 
-      - name: Run Multi-Engine Scan & OPA Policy Evaluation
-        run: |
-          export OFFLINE_MODE=true
-          python audit.py
-        # The audit.py script evaluates policies using OPA and exits non-zero if violations exist
+ci = ci.replace("      - name: Run Multi-Engine Scan", build_and_scan_steps + "\n      - name: Run Multi-Engine Scan")
+with open(".github/workflows/ci.yml", "w") as f:
+    f.write(ci)
+
