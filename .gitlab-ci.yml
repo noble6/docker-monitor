@@ -35,9 +35,18 @@ scan:
   variables:
     DOCKER_HOST: tcp://docker:2375
   before_script:
-    - apt-get update && apt-get install -y curl docker.io
+    - apt-get update && apt-get install -y curl docker.io tar
     - curl -sL -o /usr/local/bin/opa https://openpolicyagent.org/downloads/v0.61.0/opa_linux_amd64_static
     - chmod +x /usr/local/bin/opa
+    - curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b /usr/local/bin v0.50.1
+    - curl -L -o dockle.tar.gz https://github.com/goodwithtech/dockle/releases/download/v0.4.14/dockle_0.4.14_Linux-64bit.tar.gz
+    - tar zxvf dockle.tar.gz -C /usr/local/bin dockle && rm dockle.tar.gz
+    - curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b /usr/local/bin v1.3.0
+    - curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b /usr/local/bin v0.77.1
+    - trivy --version
+    - dockle --version
+    - syft --version
+    - grype --version
     - pip install -r requirements.txt
   script:
     - export OFFLINE_MODE=true

@@ -51,6 +51,27 @@ jobs:
           chmod +x bin/opa
           echo "$PWD/bin" >> $GITHUB_PATH
 
+      - name: Install Scanner Engines
+        run: |
+          mkdir -p bin
+          # Install Trivy
+          curl -sfL https://raw.githubusercontent.com/aquasecurity/trivy/main/contrib/install.sh | sh -s -- -b bin v0.50.1
+          # Install Dockle
+          curl -L -o dockle.tar.gz https://github.com/goodwithtech/dockle/releases/download/v0.4.14/dockle_0.4.14_Linux-64bit.tar.gz
+          tar zxvf dockle.tar.gz -C bin dockle && rm dockle.tar.gz
+          # Install Syft
+          curl -sSfL https://raw.githubusercontent.com/anchore/syft/main/install.sh | sh -s -- -b bin v1.3.0
+          # Install Grype
+          curl -sSfL https://raw.githubusercontent.com/anchore/grype/main/install.sh | sh -s -- -b bin v0.77.1
+          echo "$PWD/bin" >> $GITHUB_PATH
+
+      - name: Verify Scanner Engines
+        run: |
+          trivy --version
+          dockle --version
+          syft --version
+          grype --version
+
       - name: Run Multi-Engine Scan & OPA Policy Evaluation
         run: |
           export OFFLINE_MODE=true

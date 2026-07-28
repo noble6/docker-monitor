@@ -259,8 +259,16 @@ def main():
         logger.error("Docker is not installed")
         sys.exit(1)
 
-    vulnerable_image = "flask-app-vulnerable"
-    hardened_image = "flask-app-hardened"
+
+    version = "2.0.0"
+    try:
+        with open("VERSION") as f:
+            version = f.read().strip()
+    except Exception:
+        pass
+
+    vulnerable_image = f"flask-app-vulnerable:{version}"
+    hardened_image = f"flask-app-hardened:{version}"
 
     if not build_docker_image("Dockerfile.vuln", vulnerable_image):
         sys.exit(1)
@@ -270,6 +278,10 @@ def main():
     log_header("Running Scanners")
     vulnerable_stats = aggregate_scan(vulnerable_image, "scan_vulnerable.txt")
     hardened_stats = aggregate_scan(hardened_image, "scan_hardened.txt")
+
+    if vulnerable_stats["engines_active"] == 0 and hardened_stats["engines_active"] == 0:
+        logger.error("Scan did not run: 0 engines active. Ensure Trivy, Dockle, Syft, and Grype are installed.")
+        sys.exit(1)
 
     log_header("Comparison Results")
     print_comparison(vulnerable_stats, hardened_stats)
@@ -319,13 +331,28 @@ def main():
         with open(report_path, "w", encoding="utf-8") as f:
             json.dump(summary, f, indent=2)
             
-        if not eval_result.get("pass", False):
-            logger.error("CI Build Failed: Policy violations detected!")
-            for v in eval_result.get("violations", []):
+        violations = eval_result.get("violations", [])
+        blocking_violations = []
+        informational_violations = []
+        
+        for v in violations:
+            if v.startswith(f"[flask-app-vulnerable:{version}"):
+                informational_violations.append(v)
+            else:
+                blocking_violations.append(v)
+                
+        if informational_violations:
+            logger.info(f"Vulnerable image: {len(informational_violations)} violations (informational, not blocking)")
+            for v in informational_violations:
+                logger.info(f" - {v}")
+                
+        if blocking_violations:
+            logger.error(f"Hardened image: {len(blocking_violations)} violations (blocking gate: FAIL)")
+            for v in blocking_violations:
                 logger.error(f" - {v}")
             sys.exit(1)
         else:
-            logger.info("All security policies passed successfully.")
+            logger.info("Hardened image: 0 violations (blocking gate: PASS)")
             
     except ImportError:
         logger.warning("policy_evaluator module not found, skipping policy evaluation.")
