@@ -1,4 +1,4 @@
-# 🐳 docker-monitor
+# docker-monitor
 
 > Multi-engine Docker container security audit platform with real-time runtime threat monitoring, web dashboard, and CI/CD integration.
 
