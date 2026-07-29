@@ -2,7 +2,7 @@
 
 > Multi-engine Docker container security audit platform with real-time runtime threat monitoring, web dashboard, and CI/CD integration.
 
-**Test Status**: ✅ All 17 tests passing (Verified) | **Vulnerability Scan**: ✅ Trivy / Dockle / Syft / Grype supported
+**Test Status**:  All 17 tests passing (Verified) | **Vulnerability Scan**:  Trivy / Dockle / Syft / Grype supported
 
 ---
 
